@@ -22,3 +22,45 @@ predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 #sooo indeces for eye landmarks from 68 points model 
 LEFT_EYE_INDICES = [36,37,38,39,40,41]
 RIGHT_EYE_INDICES = [42,43,44,45,46,47]
+
+#constants for EAR threshold and consecutive frame count 
+
+EAR_THRESHOLD = 0.25
+CONSEC_FRAMES = 20
+
+cap = cv2.VideoCapture(0)
+frame_counter=  0
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = deector(gray)
+
+    for face in faces:
+        landmarks = predictor(gray, face)
+        landmarks_points = np.array([[p.x, p.y] for p in landmarks.parts()])
+
+        left_eye_points = landmarks_points[LEFT_EYE_INDICES]
+        right_eye_points = landmarks_points[RIGHT_EYE_INDICES]
+
+        left_ear = eye_aspect_ratio(left_eye_points)
+        right_ear = eye_aspect_ratio(right_eye_points)
+        avg_ear = (left_ear + right_ear) / 2.0
+
+        if avg_ear < EAR_THRESHOLD:
+            frame_counter += 1
+            if frame_counter >= CONSEC_FRAMES:
+                cv2.putText(frame, "DROWSINESS ALERT!", (10, 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
+        else:
+            frame_counter = 0
+        
+        cv2.imshow("Drowsiness Detection", frame)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+cap.release()
+cv2.destroyAllWindows()
