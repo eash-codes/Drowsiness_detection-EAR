@@ -2,6 +2,8 @@ import cv2
 import dlib
 import numpy as np
 from scipy.spatial import distance
+import pygame
+pygame.mixer.init()
 
 def eye_aspect_ratio(eye_points):
     #calculate distance between vertical eyes landmarks 
@@ -30,6 +32,8 @@ CONSEC_FRAMES = 20
 
 cap = cv2.VideoCapture(0)
 frame_counter=  0
+alert_sound = pygame.mixer.Sound("AlertAudio.wav")
+alert_played = False
 
 while True:
     ret, frame = cap.read()
@@ -37,7 +41,6 @@ while True:
         break
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = detector(gray)
-
     for face in faces:
         landmarks = predictor(gray, face)
         landmarks_points = np.array([[p.x, p.y] for p in landmarks.parts()])
@@ -54,9 +57,13 @@ while True:
             if frame_counter >= CONSEC_FRAMES:
                 cv2.putText(frame, "DROWSINESS ALERT!", (10, 30),
                             cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
+                if not alert_played:
+                    alert_sound.play(-1)
+                    alert_played = True
         else:
-            frame_counter = 0
-        
+            if alert_played:
+                alert_sound.stop()  # Stop the alert sound when eyes are open
+                alert_played = False
         cv2.imshow("Drowsiness Detection", frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
